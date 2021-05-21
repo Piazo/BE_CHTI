@@ -1,6 +1,6 @@
 	PRESERVE8
 	THUMB   
-		
+	export DFT_ModuleAuCarre
 
 ; ====================== zone de réservation de données,  ======================================
 ;Section RAM (read only) :
@@ -21,11 +21,37 @@
 	area    moncode,code,readonly
 ; écrire le code ici		
 
-FDT_ModuleAuCarre proc
+;module au carre en C
+;int FDT_ModuleAuCarre(short int*, char);
+;	long int reel = PartieReel(x, k);
+;	long int ima = PartieIma(x, k);
+;	reel *= reel
+; 	ima *= ima;
+;	int dft = (reel>>5) + (ima>>5);
+;	return dft
+
+
+DFT_ModuleAuCarre proc
+	;partie reelle
 	push {r0, r1, lr}
 	bl PartieReel
 	mov r2,r0
 	pop {r0,r1,lr}
+	
+	;partie imaginaire
+	push {r0,r1,r2, lr}
+	bl PartieImaginaire
+	mov r3, r0
+	pop {r0,r1,r2, lr}
+	
+	;maintenant on calcule le carre des partie reelle et ima
+	;on va multiplier 2 variable 32bits au format 5.27
+	;pour eviter les erreurs on va utiliser smull qui va nous faire une multiplication en
+	;mettant les 32 bits de poids faible du resultat de la multiplication dans le 1er registre, et les 32 bits de poids fort dans le 2e registre
+	smull r1, r0, r2, r2
+	smull r2, r1, r3, r3
+	;on ne va garder que les bits les plus significatifs et on va donc passer a un format 10.22
+	add r0, r1	
 	bx lr
 	endp
 
@@ -41,7 +67,7 @@ FDT_ModuleAuCarre proc
 
 
 PartieReel proc
-	push{r4,r5,r6,r7}
+	push{r4,r5,r6,r7,r8}
 	mov r2, #0 ;n=0, r0=x, r1=k
 	;debut de la boucle
 TantQueReel
@@ -49,21 +75,22 @@ TantQueReel
 	ldrsh r4, [r0, r2, lsl #1] ; recuperation de x a l'index n
 	mul r5, r1, r2 ; on fait p = k*n
 	and r5, #63 ;on fait le modulo
-	ldrsh r6 [TabCos, r5, lsl #1] ;on fait le cos(2*pi*p/M)
+	ldrsh r8, TabCos
+	ldrsh r6,[r8, r5, lsl #1] ;on fait le cos(2*pi*p/M)
 	mul r6, r4 ;on fait x(n) * cos(2*pi*p/M)
 	adds r7,r6 ;ajoute dans la somme tot (deborde pas car format 5.27)
 	add r2, #1 ;on incremente n
-	subs r3, r2 ;on teste si on est a la fin de la boucle (lorsque n vaut 64)
+	subs r3, r2 ;on teste si on est a la fin de la boucle (lorsque n vaut 64) si r3 different de r2 on reboucle
 	bne TantQueReel
-FinTantQue
+FinTantQueReel
 	mov r0, r7
-	pop {r4, r5, r6, r7}
+	pop {r4, r5, r6, r7,r8}
 	bx lr
 	endp
 
 
 PartieImaginaire proc
-	push{r4,r5,r6,r7}
+	push{r4,r5,r6,r7,r8}
 	mov r2, #0 ;n=0, r0=x, r1=k
 	;debut de la boucle
 TantQueIma
@@ -71,15 +98,16 @@ TantQueIma
 	ldrsh r4, [r0, r2, lsl #1] ; recuperation de x a l'index n
 	mul r5, r1, r2 ; on fait p = k*n
 	and r5, #63 ;on fait le modulo
-	ldrsh r6 [TabSin, r5, lsl #1] ;on fait le cos(2*pi*p/M)
+	ldrsh r8, TabSin
+	ldrsh r6, [r8, r5, lsl #1] ;on fait le sin(2*pi*p/M)
 	mul r6, r4 ;on fait x(n) * cos(2*pi*p/M)
 	adds r7,r6 ;ajoute dans la somme tot (deborde pas car format 5.27)
 	add r2, #1 ;on incremente n
 	subs r3, r2 ;on teste si on est a la fin de la boucle (lorsque n vaut 64)
 	bne TantQueIma
-FinTantQue
+FinTantQueIma
 	mov r0, r7
-	pop {r4, r5, r6, r7}
+	pop {r4, r5, r6, r7,r8}
 	bx lr
 	endp
 

@@ -4,7 +4,9 @@
 #include <math.h>
 #define pi 3.14159265358979323846
 
-
+extern int DFT_ModuleAuCarre(short int*, char);
+extern short int LeSignal[];
+int resultat[64];
 int main(void)
 {
 
@@ -21,18 +23,20 @@ CLOCK_Configure();
 
 //============================================================================	
 	
-int T=200*10^-6;
-int Fe=320000;
-int Te=1/Fe;
-int M=64;
 
-int k[6]={17,18,19,20,23,24};
 
+//int k[6]={17,18,19,20,23,24}; //ca correspond aux frequence de tir des pistolets divises par 5000
+
+for(int k = 0;k<64;k++){
+	
+	resultat[k] = DFT_ModuleAuCarre(LeSignal, k);
+	
+}
 
 	
 while	(1)
 	{
-				
+
 	}
 }
 
