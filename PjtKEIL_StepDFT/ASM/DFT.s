@@ -36,11 +36,11 @@ DFT_ModuleAuCarre proc
 	push {r0, r1, lr}
 	bl PartieReel
 	mov r2,r0
-	pop {r0,r1,lr}
+	pop {r0, r1, lr}
 	
 	;partie imaginaire
 	push {r0,r1,r2, lr}
-	bl PartieImaginaire
+	bl PartieIma
 	mov r3, r0
 	pop {r0,r1,r2, lr}
 	
@@ -67,47 +67,48 @@ DFT_ModuleAuCarre proc
 
 
 PartieReel proc
-	push{r4,r5,r6,r7,r8}
-	mov r2, #0 ;n=0, r0=x, r1=k
+	push{r4,r5,r6,r7}
+	mov r2, #0 ;n=0
+	mov r7, #0
+	ldr r3, =TabCos
 	;debut de la boucle
 TantQueReel
-	mov r3, #64 ;M=64
-	ldrsh r4, [r0, r2, lsl #1] ; recuperation de x a l'index n
+	ldrsh r4, [r0, r2, lsl #1] ; recuperation de x[n]
 	mul r5, r1, r2 ; on fait p = k*n
-	and r5, #63 ;on fait le modulo
-	ldrsh r8, TabCos
-	ldrsh r6,[r8, r5, lsl #1] ;on fait le cos(2*pi*p/M)
-	mul r6, r4 ;on fait x(n) * cos(2*pi*p/M)
-	adds r7,r6 ;ajoute dans la somme tot (deborde pas car format 5.27)
 	add r2, #1 ;on incremente n
-	subs r3, r2 ;on teste si on est a la fin de la boucle (lorsque n vaut 64) si r3 different de r2 on reboucle
+	and r5, #63 ;on fait le modulo 64
+	ldrsh r6,[r3, r5, lsl #1] ;on fait le cos(2*pi*p/M)
+	mul r6, r4 ;on fait x(n) * cos(2*pi*p/M)
+	add r7,r6 ;ajoute dans la somme total (deborde pas car format 5.27)
+
+	cmp r2, #64
 	bne TantQueReel
 FinTantQueReel
 	mov r0, r7
-	pop {r4, r5, r6, r7,r8}
+	pop {r4, r5, r6, r7}
 	bx lr
 	endp
-
-
-PartieImaginaire proc
-	push{r4,r5,r6,r7,r8}
-	mov r2, #0 ;n=0, r0=x, r1=k
+		
+PartieIma proc
+	push{r4,r5,r6,r7}
+	mov r2, #0 ;n=0
+	mov r7, #0
+	ldr r3, =TabSin
 	;debut de la boucle
 TantQueIma
-	mov r3, #64 ;M=64
-	ldrsh r4, [r0, r2, lsl #1] ; recuperation de x a l'index n
+	ldrsh r4, [r0, r2, lsl #1] ; recuperation de x[n]
 	mul r5, r1, r2 ; on fait p = k*n
-	and r5, #63 ;on fait le modulo
-	ldrsh r8, TabSin
-	ldrsh r6, [r8, r5, lsl #1] ;on fait le sin(2*pi*p/M)
-	mul r6, r4 ;on fait x(n) * cos(2*pi*p/M)
-	adds r7,r6 ;ajoute dans la somme tot (deborde pas car format 5.27)
 	add r2, #1 ;on incremente n
-	subs r3, r2 ;on teste si on est a la fin de la boucle (lorsque n vaut 64)
+	and r5, #63 ;on fait le modulo 64
+	ldrsh r6,[r3, r5, lsl #1] ;on fait le cos(2*pi*p/M)
+	mul r6, r4 ;on fait x(n) * cos(2*pi*p/M)
+	add r7,r6 ;ajoute dans la somme total (deborde pas car format 5.27)
+
+	cmp r2, #64
 	bne TantQueIma
 FinTantQueIma
 	mov r0, r7
-	pop {r4, r5, r6, r7,r8}
+	pop {r4, r5, r6, r7}
 	bx lr
 	endp
 
